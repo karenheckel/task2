@@ -1,26 +1,40 @@
 package edu.cs.utexas.HadoopEx;
 
 import java.io.IOException;
-import java.util.StringTokenizer;
 
-import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
 
-public class WordCountMapper extends Mapper<Object, Text, Text, IntWritable> {
+public class WordCountMapper extends Mapper<Object, Text, Text, Text> {
 
-	// Create a counter and initialize with 1
-	private final IntWritable counter = new IntWritable(1);
-	// Create a hadoop text object to store words
-	private Text word = new Text();
-
-	public void map(Object key, Text value, Context context) 
+	public void map(Object key, Text value, Context context)
 			throws IOException, InterruptedException {
-		
-		StringTokenizer itr = new StringTokenizer(value.toString());
-		while (itr.hasMoreTokens()) {
-			word.set(itr.nextToken());
-			context.write(word, counter);
+				
+		String line = value.toString();
+		if (line.startsWith("YEAR,"))
+			return;
+
+		String[] fields = line.split(",", -1);
+		if (fields.length < 12)
+			return;
+
+		String airline = fields[4];
+		if (airline.isEmpty())
+			return;
+
+		String departureDelay = fields[11];
+		if (departureDelay.isEmpty())
+			return;
+		if (departureDelay.equalsIgnoreCase("NA"))
+			return;
+
+		long totalDelay;
+		try {
+			totalDelay = Math.round(Double.parseDouble(departureDelay));
+		} catch (NumberFormatException e) {
+			return;
 		}
+
+		context.write(new Text(airline), new Text(totalDelay + ",1"));
 	}
 }
